@@ -17,12 +17,26 @@ public class Program
 
 public static class ShuntingYard
 {
-	static readonly var	operators = new[]  {
-		new { symbol="^", precedence=4, rightAssociative=true },
-		new { symbol="*", precedence=3, rightAssociative=false},
-		new { symbol="/", precedence=3, rightAssociative=false},
-		new { symbol="+", precedence=2, rightAssociative=false},
-		new { symbol="-", precedence=2, rightAssociative=false} }.ToDictionary(op => op.symbol);
+	class Operator
+	{
+	    public string symbol;
+	    public int precedence;
+	    public bool rightAssociative;
+
+	    public Operator(string symbol, int precedence, bool rightAssociative )
+	    {
+	        this.symbol=symbol;
+	        this.precedence=precedence;
+	        this.rightAssociative=rightAssociative;
+	    }
+	}
+
+	static readonly IDictionary<string,Operator>	operators = new[]  {
+		new Operator("^",4,true),
+		new Operator("*",3,false),
+		new Operator("/",3,false),
+		new Operator("+",2,false),
+		new Operator("-",2,false) }.ToDictionary(op => op.symbol);
 
 
     public static string ToPostfix(this string infix)
@@ -31,17 +45,24 @@ public static class ShuntingYard
         var stack = new Stack<string>();    // stack is ready
         var output = new List<string>();    // list is ready
 
+        Action<string> Print = (action) => Console.WriteLine($"{action + ":",-4}
+                                                               {$"stack[ {string.Join(" ", stack.Reverse())} ]",-18}
+                                                               {$"out[ {string.Join(" ", output)}]"}"   );
+
         // tokens processing
         foreach (string token in tokens) // while there are tokens to be read:
         {
-            if (int.TryParse(token, out _ )) // if the token is a number,
+            int obsoleteInt;
+            Operator op1,op2;
+
+            if (int.TryParse(token, out obsoleteInt )) // if the token is a number,
             {
                 output.Add(token);  //  push it to the output queue.
-                Print(token); // ????
+                Print(token);
             }
-            else if (operators.TryGetValue(token, out var op1))
+            else if (operators.TryGetValue(token, out op1))
             {
-                while (stack.Count > 0 && operators.TryGetValue(stack.Peek(), out var op2))
+                while (stack.Count > 0 && operators.TryGetValue(stack.Peek(), out op2))
                 {
                     int c = op1.precedence.CompareTo(op2.precedence);
                     if (c < 0 || !op1.rightAssociative && c <= 0)
@@ -83,11 +104,5 @@ public static class ShuntingYard
         Print("pop");
         return string.Join(" ", output);
 
-        //Yikes!
-        void Print(string action) =>
-            Console.WriteLine($"{action + ":",-4} {$"stack[ {string.Join(" ", stack.Reverse())} ]",-18} {$"out[ {string.Join(" ", output)} ]"}");
-        //A little more readable?
-        void Print(string action) =>
-            Console.WriteLine("{0,-4} {1,-18} {2}", action + ":", $"stack[ {string.Join(" ", stack.Reverse())} ]", $"out[ {string.Join(" ", output)} ]");
     }
 }
